@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>CS 241: MP4</title>
+    
+    <style type="text/css">
+    body, table { font-family: arial; font-size: 12px; }
+    h2 { font-size: 24px; }
+    h3 { font-size: 22px; }
+    h4 { font-size: 16px; }
+    blockquote { border: dashed 1px black; padding: 3px; display: block; background-color: #dddddd;  font-family: courier; color: #000080;}
+    tt { color: #000080; }
+    table { border: solid 1px black; margin-left: 20px; }
+    table tr td { text-align: center; }
+    table tr th { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <h3>MiniMP for CS 241 Discussion Sections on July 3, 2012</h3>
+    <hr />
+
+
+    <h2>Introduction</h2>
+    <p>In this MiniMP, you will start work on MP4 by implementing FCFS on our scheduler and gathering statistics about the jobs you scheduled.</p>
+
+    <p>You should look at <tt>libscheduler/libscheduler.c</tt> in your <tt>ds2</tt> folder.  You will want to focus on <tt>_new_job()</tt> and <tt>_job_finished()</tt>.  We
+    have filled in a basic <tt>job_t</tt> data structure for your use.</p>
+
+
+    <h2>Compile and Run</h2>
+    To compile:
+    <blockquote>
+        $ make clean<br />
+        $ make
+    </blockquote>
+
+    To run:
+    <blockquote>
+        $ ./simulator -s FCFS -c 1 examples/proc1.csv<br />
+        $ ./simulator -s FCFS -c 1 examples/proc2.csv<br />
+        $ ./simulator -s FCFS -c 1 examples/proc3.csv
+    </blockquote>
+</body>
+</html>

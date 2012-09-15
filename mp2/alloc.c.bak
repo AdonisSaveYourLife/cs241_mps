@@ -1,0 +1,456 @@
+/** @file alloc.c */
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+
+#define true 1
+#define false 0
+typedef char bool;
+
+#define MIN_SBRK_SIZE 1024*16
+#define MIN_BLOCK_SIZE 32
+#define MIN_BLOCK_ORDER 5
+#define MAX_BLOCK_ORDER 20
+#define MAX(A,B) ( (A>B)?(A):(B) )
+#define MIN(A,B) ( (A>B)?(B):(A) )
+#define MDIC(A) ((mem_dic*)A)
+
+//#define DEBUG
+#ifdef DEBUG
+#  define D(x) x
+#else
+#  define D(x) 
+#endif
+
+void* heap_ptr = NULL;
+size_t total_size = 0;
+// size_t total_available_size = 0;
+typedef struct _mem_dic {
+	size_t size;
+	bool occupy;
+} mem_dic;
+
+void *split_block(void* , size_t );
+
+
+bool divided2(size_t small, size_t large)
+{
+	while (small < large)
+	{
+		small *= 2;
+	}
+	if (small==large) return 1;
+	else return 0;
+}
+
+// Find the feasible length of block that can store size of information
+size_t find_new_alloc_size(size_t size)
+{
+	size_t actual_size = size + sizeof(mem_dic);
+	size_t num = MIN_BLOCK_SIZE;
+	while(num<actual_size){
+		num *=2;	
+	}
+
+	D(printf("find_new_alloc_size: new size is %zu \n",size));
+	D(printf("find_new_alloc_size: the block length should be %zu \n",num));
+	return num;
+}
+
+// Find the available block large enough to fit the size,
+// the available block should be the smallest block which is larger than the size
+void* block_available(size_t size_plus_dic)
+{
+	if(heap_ptr==NULL || total_size ==0){
+		D(printf("block_available: the heap is empty, no block of size %zu\n", size_plus_dic));
+		return NULL;
+	}
+
+	void* p = heap_ptr;
+	void* lowest_ptr = NULL;
+	size_t lowest_size = 0;
+
+
+	D(printf("block_available(): total size is %zu\n", total_size));
+	while((unsigned long)(p - heap_ptr) < total_size){
+		if( MDIC(p)->size >= size_plus_dic && MDIC(p)->occupy==false) {
+			if (MDIC(p)->size < lowest_size || lowest_size == 0)
+			{
+				lowest_ptr = p;
+				lowest_size = MDIC(p)->size;
+			}
+		}
+		p += MDIC(p)->size;
+	}
+
+	if (lowest_size >0)
+	{
+		p = lowest_ptr;
+		D(printf("block_available: find block at pos: %zu with size %zu for actual size %zu\n",
+				(size_t)(p - heap_ptr), MDIC(p)->size, size_plus_dic));
+		return p;
+	}
+	else{
+		D(printf("block_available: no block for size %zu\n", size_plus_dic));
+		return NULL;
+	}
+}
+
+/**
+* Initialize heap if necessary
+* Allocate blocks 2^k begining from the size MAX(MIN_SBRK_SIZE, total_size) until it is 
+enough to put size into it.
+* If size is small, do further split.
+* Else do not need to split, just put inside.
+size should be pwer of 2.
+**/
+
+void* allocate_new_space(size_t size)
+{
+	void* extend_heap_ptr = NULL;
+	void* new_ptr = NULL;
+	size_t one_time_alloc = MAX(MIN_SBRK_SIZE,total_size);
+
+	extend_heap_ptr = sbrk(one_time_alloc);
+	MDIC(extend_heap_ptr) -> size = one_time_alloc;
+	MDIC(extend_heap_ptr) -> occupy = false;
+	total_size += one_time_alloc;
+	if(heap_ptr == NULL) heap_ptr = extend_heap_ptr;
+
+	D(printf("allocate_new_space(): sbrked %zu bytes at loc %zu, total_size: %zu\n",
+		MDIC(extend_heap_ptr) -> size, (size_t)(extend_heap_ptr - heap_ptr) ,total_size));
+
+	if (MDIC(extend_heap_ptr) -> size >= size)
+	{
+		/* Split if necessary, then return */
+		if(size > MDIC(extend_heap_ptr)->size / 2) return extend_heap_ptr;
+		return split_block(extend_heap_ptr,size);
+	}
+	else
+	{
+		while(one_time_alloc < size)
+		{
+		one_time_alloc *= 2;
+		new_ptr = sbrk(one_time_alloc);
+		MDIC(new_ptr) -> size = one_time_alloc;
+		MDIC(new_ptr) -> occupy = false;
+		total_size += one_time_alloc;
+		D(printf("allocate_new_space(): sbrked %zu bytes at loc %zu, total_size: %zu\n",
+			MDIC(new_ptr) -> size, (size_t)(new_ptr - heap_ptr) ,total_size));
+		}
+		if (one_time_alloc!=size)
+		{
+			D(printf("error in allocate_new_space()size %zu is not equal to one_time_alloc: %zu\n",
+				size, one_time_alloc));
+			return NULL;
+		}
+		else {
+			return new_ptr;
+		}
+	}
+}
+
+
+/**
+* split the block located at block_ptr to get blocks suitable to store size
+small_block_size.
+small_block_size must be smaller than the block of block_ptr.
+small_block_size must be power of 2.
+block_ptr size must be power of 2.
+small_block_size must can be divided by the size of block_ptr
+Initialize all generated blocks
+**/
+
+void *split_block(void* block_ptr, size_t small_block_size)
+{
+	// error check
+	if(MDIC(block_ptr) -> size <= small_block_size)
+	{
+		D(
+		printf("split_block: the oritinal size: %zu is smaller than the splitted size %zu\n",
+			MDIC(block_ptr) -> size, small_block_size)
+		);
+		return NULL;
+	}
+
+	if (!divided2(small_block_size,MDIC(block_ptr)->size))
+	{
+		D(
+		printf("Error in split_block(): the original %zu can not be divided by %zu \n", 
+			 MDIC(block_ptr)->size, small_block_size)
+		);
+		return NULL;
+	}
+
+	void* front_ptr = block_ptr;
+	void* back_ptr = NULL;
+	while(MDIC(front_ptr)->size > small_block_size)
+	{
+		MDIC(front_ptr)->size /= 2;
+		back_ptr = front_ptr + MDIC(front_ptr)->size;
+		MDIC(back_ptr)->size = MDIC(front_ptr)->size;
+		MDIC(back_ptr)->occupy = false;
+	}
+
+	if (MDIC(front_ptr)->size != small_block_size)
+	{
+		D( printf("Fatal Error in split_block(): size is splited too small!\n") );
+		return NULL;
+	}
+	else return front_ptr;
+}
+
+void* buddy_exist_not_occupied(void* block_ptr)
+{
+	int buddy_flag = 
+	( (block_ptr - heap_ptr) / ( MDIC(block_ptr)->size ) )%2;
+	void* buddy_ptr = NULL;
+	size_t size = MDIC(block_ptr)->size;
+
+	if(buddy_flag==0)
+	{
+		// the buddy is on the left
+		buddy_ptr = block_ptr - size;
+		if ( buddy_ptr>=heap_ptr && MDIC(buddy_ptr)->size==size 
+				&& MDIC(buddy_ptr)->occupy==false )
+		{
+			return buddy_ptr;
+		}
+	}
+	else // buddy_flag == 1
+	{
+		// the buddy is on the right
+		buddy_ptr = block_ptr + size;
+		if ( (size_t)(buddy_ptr - heap_ptr) < total_size && MDIC(buddy_ptr)->size==size
+			&& MDIC(buddy_ptr)->occupy==false )
+		{
+			return block_ptr;
+		}
+	}
+
+	return NULL;
+}
+
+/**
+ * Allocate space for array in memory
+ * 
+ * Allocates a block of memory for an array of num elements, each of them size
+ * bytes long, and initializes all its bits to zero. The effective result is
+ * the allocation of an zero-initialized memory block of (num * size) bytes.
+ * 
+ * @param num
+ *    Number of elements to be allocated.
+ * @param size
+ *    Size of elements.
+ *
+ * @return
+ *    A pointer to the memory block allocated by the function.
+ *
+ *    The type of this pointer is always void*, which can be cast to the
+ *    desired type of data pointer in order to be dereferenceable.
+ *
+ *    If the function failed to allocate the requested block of memory, a
+ *    NULL pointer is returned.
+ *
+ * @see http://www.cplusplus.com/reference/clibrary/cstdlib/calloc/
+ */
+void *calloc(size_t num, size_t size)
+{
+	/* Note: This function is complete. You do not need to modify it. */
+	void *ptr = malloc(num * size);
+	
+	if (ptr)
+		memset(ptr, 0x00, num * size);
+
+	return ptr;
+}
+
+
+/**
+ * Allocate memory block
+ *
+ * Allocates a block of size bytes of memory, returning a pointer to the
+ * beginning of the block.  The content of the newly allocated block of
+ * memory is not initialized, remaining with indeterminate values.
+ *
+ * @param size
+ *    Size of the memory block, in bytes.
+ *
+ * @return
+ *    On success, a pointer to the memory block allocated by the function.
+ *
+ *    The type of this pointer is always void*, which can be cast to the
+ *    desired type of data pointer in order to be dereferenceable.
+ *
+ *    If the function failed to allocate the requested block of memory,
+ *    a null pointer is returned.
+ *
+ * @see http://www.cplusplus.com/reference/clibrary/cstdlib/malloc/
+ */
+void *malloc(size_t size)
+{
+	if(size<=0) return NULL;
+
+	size_t size_plus_dic = find_new_alloc_size(size);
+	
+	void *block_ptr = block_available(size_plus_dic);
+
+	if (block_ptr == NULL)
+	{
+		/* Allocate new space from sbrk() */
+		block_ptr = allocate_new_space(size_plus_dic);
+		
+		D(printf("malloc(): find new space at loc %zu with length %zu, occupy:%d\n",
+				(size_t)(block_ptr - heap_ptr),MDIC(block_ptr)->size,
+				MDIC(block_ptr)->occupy ));
+		MDIC(block_ptr) -> occupy = true;
+		return block_ptr + sizeof(mem_dic);
+	}
+	else
+	{
+		/* Assign the size to the block, split the block if necessary */
+		if (MDIC(block_ptr)->size == size_plus_dic)
+		{
+			/* we find a corresponding place, we can return */
+			D( printf("malloc(): find old space at loc %zu with length %zu, occupy:%d\n",
+				(size_t)(block_ptr - heap_ptr),MDIC(block_ptr)->size,
+				MDIC(block_ptr)->occupy ) );
+
+			MDIC(block_ptr) -> occupy = true;
+			return block_ptr + sizeof(mem_dic);
+		}
+		else
+		{ // MDIC(block_ptr)->size > size_plus_dic *2
+			block_ptr = split_block(block_ptr,size_plus_dic);
+			if(block_ptr!=NULL){
+
+				D( printf("malloc(): find splitted space at loc %zu with length %zu, occupy:%d\n",
+				(size_t)(block_ptr - heap_ptr),MDIC(block_ptr)->size,
+				MDIC(block_ptr)->occupy ) );
+
+				MDIC(block_ptr) -> occupy = true;
+				return block_ptr + sizeof(mem_dic);
+			}
+			else return NULL;
+		}
+	}
+	
+	return NULL;
+}
+
+
+/**
+ * Deallocate space in memory
+ * 
+ * A block of memory previously allocated using a call to malloc(),
+ * calloc() or realloc() is deallocated, making it available again for
+ * further allocations.
+ *
+ * Notice that this function leaves the value of ptr unchanged, hence
+ * it still points to the same (now invalid) location, and not to the
+ * null pointer.
+ *
+ * @param ptr
+ *    Pointer to a memory block previously allocated with malloc(),
+ *    calloc() or realloc() to be deallocated.  If a null pointer is
+ *    passed as argument, no action occurs.
+ */
+void free(void *ptr)
+{
+	// "If a null pointer is passed as argument, no action occurs."
+	if (!ptr)
+		return;
+
+	void* block_ptr = ptr - sizeof(mem_dic);
+	if ( MDIC(block_ptr)->occupy==false )
+	{
+		D( printf("error in free(): the pos in %ld is not used\n",block_ptr - heap_ptr) );
+	}
+
+	MDIC(block_ptr)->occupy = false;
+	void* merge_ptr = NULL;
+
+	while( (merge_ptr = buddy_exist_not_occupied(block_ptr)) != NULL )
+	{
+		// merge buddy_ptr and block_ptr
+		MDIC(merge_ptr)->size *= 2;
+		MDIC(merge_ptr)->occupy = false;
+		block_ptr = merge_ptr;
+	}
+	
+	return;
+}
+
+
+/**
+ * Reallocate memory block
+ *
+ * The size of the memory block pointed to by the ptr parameter is changed
+ * to the size bytes, expanding or reducing the amount of memory available
+ * in the block.
+ *
+ * The function may move the memory block to a new location, in which case
+ * the new location is returned. The content of the memory block is preserved
+ * up to the lesser of the new and old sizes, even if the block is moved. If
+ * the new size is larger, the value of the newly allocated portion is
+ * indeterminate.
+ *
+ * In case that ptr is NULL, the function behaves exactly as malloc, assigning
+ * a new block of size bytes and returning a pointer to the beginning of it.
+ *
+ * In case that the size is 0, the memory previously allocated in ptr is
+ * deallocated as if a call to free was made, and a NULL pointer is returned.
+ *
+ * @param ptr
+ *    Pointer to a memory block previously allocated with malloc(), calloc()
+ *    or realloc() to be reallocated.
+ *
+ *    If this is NULL, a new block is allocated and a pointer to it is
+ *    returned by the function.
+ *
+ * @param size
+ *    New size for the memory block, in bytes.
+ *
+ *    If it is 0 and ptr points to an existing block of memory, the memory
+ *    block pointed by ptr is deallocated and a NULL pointer is returned.
+ *
+ * @return
+ *    A pointer to the reallocated memory block, which may be either the
+ *    same as the ptr argument or a new location.
+ *
+ *    The type of this pointer is void*, which can be cast to the desired
+ *    type of data pointer in order to be dereferenceable.
+ *    
+ *    If the function failed to allocate the requested block of memory,
+ *    a NULL pointer is returned, and the memory block pointed to by
+ *    argument ptr is left unchanged.
+ *
+ * @see http://www.cplusplus.com/reference/clibrary/cstdlib/realloc/
+ */
+void *realloc(void *ptr, size_t size)
+{
+	 // "In case that ptr is NULL, the function behaves exactly as malloc()"
+	if (!ptr)
+		return malloc(size);
+
+	 // "In case that the size is 0, the memory previously allocated in ptr
+	 //  is deallocated as if a call to free() was made, and a NULL pointer
+	 //  is returned."
+	if (!size)
+	{
+		free(ptr);
+		return NULL;
+	}
+
+	void* block_ptr = ptr - sizeof(mem_dic);
+	if ( MDIC(block_ptr)->size >= size )
+	{
+		return ptr;
+	}
+
+	void* new_ptr = malloc(size);
+	memcpy( new_ptr, ptr, MDIC(block_ptr)->size - sizeof(mem_dic) );
+	free(ptr);
+	return new_ptr;
+}

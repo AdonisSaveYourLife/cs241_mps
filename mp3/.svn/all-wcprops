@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/su12-cs241/!svn/ver/1174/jizhu1/mp3
+END
+log.c
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/su12-cs241/!svn/ver/671/jizhu1/mp3/log.c
+END
+testlog.c
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/su12-cs241/!svn/ver/661/jizhu1/mp3/testlog.c
+END
+log.h
+K 25
+svn:wc:ra_dav:version-url
+V 45
+/svn/su12-cs241/!svn/ver/671/jizhu1/mp3/log.h
+END
+shell.c
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/svn/su12-cs241/!svn/ver/671/jizhu1/mp3/shell.c
+END
+autograde.txt
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/svn/su12-cs241/!svn/ver/1174/jizhu1/mp3/autograde.txt
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/svn/su12-cs241/!svn/ver/590/jizhu1/mp3/Makefile
+END

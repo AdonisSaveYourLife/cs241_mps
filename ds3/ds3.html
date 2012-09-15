@@ -1,0 +1,62 @@
+<html>
+<head>
+	<title>Discussion Section 3: Mini-Shell</title>
+    
+	<style type="text/css">
+	body { font-family: arial; font-size: 12px; }
+	h2 { font-size: 24px; }
+	h3 { font-size: 22px; }
+	h4 { font-size: 16px; }
+	blockquote { border: dashed 1px black; padding: 3px; display: block; background-color: #dddddd;  font-family: courier; color: #000080;}
+	tt { color: #000080; }
+	</style>
+</head>
+
+<body>
+	<h1>Discussion Section for June 26, 2012: Mini-Shell</h1>
+	<hr />
+
+	<h2>In Discussion Section</h2>
+	<p>
+    Implement a mini-shell that does the following:
+    <ul>
+        <li>prompt the user for input by writing a <tt>$ </tt>,</li>
+        <li>exits on <tt>exit</tt>,</li>
+        <li>changes directory on <tt>cd XXX</tt>, where XXX may be any directory, and</li>
+        <li>run every other command as a program via <tt>system()</tt></li>
+    </ul>
+	</p>
+
+    <p>
+        You can assume everything will be lower case (eg: <tt>exit</tt> will always be exactly <tt>exit</tt>), all commands will not have any extra whitespace, and all arguments to a command will be seperated by exactly one space.
+    </p>
+
+	<h2>Compiling and Running</h2>
+	<p>To compile and run your shell, run the following commands from a Terminal on a Linux machine:</p>
+	<blockquote>
+	$ make<br>
+    $ ./mshell
+	</blockquote>
+
+
+	<h2>Example</h2>
+	<p>
+        Consider the following example run of your shell:
+	</p>
+
+    <blockquote>
+    $ ls<br />
+    Makefile  mshell  mshell.c<br />
+    $ pwd<br />
+    /home/wfagen2/cs241svn/wfagen2/ds3<br />
+    $ cd ..<br />
+    $ ls<br />
+    ds1  ds2  ds3  hw1  mp1  mp2  mp3<br />
+    $ pwd<br />
+    /home/wfagen2/cs241svn/wfagen2<br />
+    $ echo hello world<br />
+    hello world<br />
+    $ exit<br />
+    </blockquote>
+</body>
+</html>

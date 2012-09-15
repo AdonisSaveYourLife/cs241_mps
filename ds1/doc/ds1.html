@@ -1,0 +1,65 @@
+<html>
+<head>
+    <title>CS 241</title>
+    
+    <style type="text/css">
+    body { font-family: arial; font-size: 12px; }
+    h2 { font-size: 24px; }
+    h3 { font-size: 22px; }
+    h4 { font-size: 16px; }
+    blockquote { border: dashed 1px black; padding: 3px; display: block; background-color: #dddddd;  font-family: courier; color: #000080;}
+    tt { color: #000080; }
+    </style>
+</head>
+<body>
+    <h3>MiniMP for CS 241 Discussion Sections on June 12, 2012</h3>
+    <hr />
+
+    <h2>Instructions</h2>
+    <p>
+        To help you get started in C, we will be programming a very simple binary tree.  To do this, you will be writing a simple
+        library, so we have already provided you the code to run your MP.  For example, <tt>test1.c</tt> contains:
+    </p>
+
+    <blockquote>
+	    btree_t tree;<br />
+	    btree_init(&tree);<br />
+        <br />
+	    btree_add(&tree, 3);<br />
+	    btree_add(&tree, 1);<br />
+	    btree_add(&tree, 2);<br />
+	    btree_add(&tree, 4);<br />
+        <br />
+	    btree_print(&tree);        
+    </blockquote>
+
+    <p>
+        In this MiniMP, you will need to implement:
+        <ul>
+            <li>The btree_entry_t data structure in <tt>btree.h</tt>: [<a href="btree_8h_source.html">see source</a>]</li>
+            <li>The btree_init() function in <tt>btree.c</tt>: [<a href="btree_8c.html">documentation</a>]</li>
+            <li>The btree_add() function <tt>btree.c</tt>: [<a href="btree_8c.html">documentation</a>]</li>
+            <li>The btree_print_helper() helper function <tt>btree.c</tt>: [<a href="btree_8c.html">documentation</a>]</li>
+        </ul>
+    </p>
+
+
+    <h2>Compile and Run</h2>
+    To compile, run:
+    <blockquote>
+        make clean<br />
+        make
+    </blockquote>
+
+    To run the first test case:
+    <blockquote>
+        ./test1
+    </blockquote>
+
+    To run the larger, second test case:
+    <blockquote>
+        ./test2
+    </blockquote>
+</body>
+
+</html>

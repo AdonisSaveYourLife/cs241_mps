@@ -1,0 +1,14 @@
+all: s3a s3b s3c
+
+s3a:
+	echo "Stage #3(a)"
+	sleep 5
+	echo "Stage #3(a) complete!"
+s3b:
+	echo "Stage #3(b)"
+	sleep 100
+	echo "Stage #3(b) complete!"
+s3c:
+	echo "Stage #3(c)"
+	sleep 5
+	echo "Stage #3(c) complete!"

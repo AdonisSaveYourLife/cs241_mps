@@ -1,0 +1,41 @@
+<html>
+<head>
+	<title>Discussion Section 3: Mini-Shell</title>
+    
+	<style type="text/css">
+	body { font-family: arial; font-size: 12px; }
+	h2 { font-size: 24px; }
+	h3 { font-size: 22px; }
+	h4 { font-size: 16px; }
+	blockquote { border: dashed 1px black; padding: 3px; display: block; background-color: #dddddd;  font-family: courier; color: #000080;}
+	tt { color: #000080; }
+	</style>
+</head>
+
+<body>
+	<h1>Discussion Section for July 24, 2012: Introduction to MP6</h1>
+	<hr />
+
+	<h2>In Discussion Section</h2>
+	<p>
+        In ds7, you will use <a href="http://linux.die.net/man/2/select">select()</a> to perform I/O multiplexting.  In ds7, you should:
+        <ul>
+            <li>Create two pipes to communite with the two threads that are provided for you</li>
+            <li>Launch the two threads, passing in the write-end of one of the pipes to each thread (each thread should get a unique fd)</li>
+            <li>Use select() to read from the two pipes as soon as data is available</li>
+        </ul>
+	</p>
+
+
+
+
+	<h2>Compiling and Running</h2>
+	<p>To compile and run, use the following commands from a terminal on a Linux machine:</p>
+	<blockquote>
+	$ make<br />
+    $ ./ds7
+	</blockquote>
+
+
+</body>
+</html>

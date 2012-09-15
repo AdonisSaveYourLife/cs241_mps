@@ -1,0 +1,165 @@
+﻿<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>CS 241: Deadlock Resilient Mutex</title>
+
+    <style type="text/css">
+    body { font-family: arial; font-size: 12px; }
+    h2 { font-size: 24px; }
+    h3 { font-size: 22px; }
+    h4 { font-size: 16px; }
+    blockquote { border: dashed 1px black; padding: 3px; display: block; background-color: #dddddd;  font-family: courier; color: #000080;}
+    tt { color: #000080; }
+        .style1
+        {
+            background-color: #FFFFCC;
+        }
+    </style>
+</head>
+<body>
+	<h3>Due: Sunday, July 22, 2012 at 11:59pm</h3>
+<h2>Introduction</h2>
+
+<p>
+This MP will help you to be familiar with POSIX mutex locks in C.
+POSIX mutexes are prone to deadlocks and contain no deadlock prevention, 
+detection, or avoidance mechanisms. In this MP, you will be writing a 
+C library that extends POSIX mutexes allowing for deadlock prevention, 
+detection, and avoidance.
+</p>
+<p>
+To make the programming easier, we split this MP up into two unique
+parts: the deadlock resilient mutexes part and the wait-for graph
+part (as detecting deadlocks in mutexes require checking for cycles
+inside a wait-for graph).
+</p>
+
+
+<h2>Tasks</h2>
+
+<h4>[Part 1]</h4>
+
+<p>
+    Complete the <a href="libwfg_8c.html">wait-for graph library (libwfg)</a> functions.  You will need to edit both <tt>libwfg.c</tt> and <tt>libwfg.h</tt> to complete this part.
+    We have provided <tt>testwfg.c</tt> to allow you to test your wait-for graph independently of the rest of this MP.
+</p>
+
+<p>
+    We have also provided you with our standard <a href="queue_8c.html">queue data structure</a>.  You can use this as either a queue or a vector if you need to store lists of
+    data for either part of this MP.
+</p>
+
+
+<h4>[Part 2]</h4>
+
+<p>Complete the <a href="libdrm_8c.html">deadlock resilient mutex (libdrm)</a> functions.  You will need to edit both <tt>libdrm.c</tt> and <tt>libdrm.h</tt> to complete this part.</p>
+
+<p>
+    As part of implementing libdrm, you will find that the <tt>drm_setmode()</tt> function takes in four different modes that your library must operate under.  Your library
+    should behave in the following way, based on the <tt>mode</tt> set in <tt>drm_setmode()</tt>:
+</p>
+
+<ul>
+    <li>
+        <b>NO_DEADLOCK_CHECKING</b>: Your mutexes should run identically to pthread mutexes.  (<i>This does not require a libwfg.</i>)<br />
+        <br />
+    </li>
+
+    <li>
+        <b>DEADLOCK_PREVENTION</b>: You must prevent deadlocks by ensuring that your mutexes are acquired in a strict order.  (<i>This does not require a libwfg.</i>)<br />
+        <br />
+        If a specific threads needs access to mutexes r1, r2, and r3, <tt>drm_lock()</tt> must fail if:
+        <ul>
+            <li>The user tries to <tt>drm_lock()</tt> on r1 after the user already acquired a <tt>drm_lock()</tt> on r2 or r3.</li>
+            <li>The user tries to <tt>drm_lock()</tt> on r2 after the user already acquired a <tt>drm_lock()</tt> on r3.</li>
+        </ul>
+        <br />
+        In this method, every thread must get the lower ID mutex first.  By doing this, we prevent any possible cycles in the wait-for graph (without even building a wait-for graph).<br />
+        <br />
+        For this method, the first mutex to call <tt>drm_init()</tt> should be considered to have the "lower ID" and must be acquired first.  The following code shows how the example above relates directly to code:
+        <blockquote>
+        drm_init(&mutex1);  /* r1 */<br />
+        drm_init(&mutex2);  /* r2 */<br />
+        drm_init(&mutex3);  /* r3 */<br />
+        </blockquote>
+    </li>
+
+    <li>
+        <b>DEADLOCK_AVOIDANCE</b>: You must prevent deadlocks by constructing a wait-for graph.  When a thread attempts to acquire a lock (by calling <tt>drm_lock()</tt>), check if granting the request would result in a cycle in the graph.
+        If a cycle would exist, the <tt>drm_lock()</tt> call must fail (and remember to remove the edge you added!).  If a cycle doesn't exist, the call is successful.<br />
+        <br />
+        In order to check if a cycle would exist at any point in the graph, you will need to update the wait-for graph every time your library changes the state of a mutex.<br />
+        <br />
+        In this method, no thread is allowd to make a request that would result in a cycle.  Since a cycle is a condition of deadlock, we avoid deadlock.<br />
+        <br />
+    </li>
+
+    <li>
+        <b>DEADLOCK_DETECTION</b>: Always grant the lock, just like NO_DEADLOCK_CHECKING.  However, you must also launch a single thread that periodicly checks if a cycle currently exists in the wait-for graph.
+        Similiar to DEADLOCK_AVOIDANCE, you will need to constantly maintain a wait-for graph of your current state.<br />
+        <br />
+        In th thread:<br />
+        <ul>
+            <li>call <tt>wfg_print_graph()</tt> to output the current state of your program, </li>
+            <li>check if a cycle exists in the wait-for graph,</li>
+            <li>if a cycle does exist: randomly (<tt>rand()</tt>) choose one of the threads to notify to release its locks (explained below), and</li>
+            <li>sleep for one second by calling <tt>sleep(1)</tt> (this is the only time you will ever be allowed to use sleep() in CS 241)</li>
+        </ul>
+        <br />
+        To notify a thread to release its locks, we will be using a signal.  It's not necessary to understand how a singal works at this point (you will learn about it in CS 241 later if you haven't already), but you can
+        signal the thread by running the following line of code:
+        <blockquote>
+            pthread_kill(thread_id, SIGUSR1);
+        </blockquote>
+        ...where <tt>thread_id</tt> is the ID of the thread you wish to signal.
+    </li>
+</ul>
+
+<p>
+    In order to complete these functions, you will need to create your own mutexes to protect your own access to <tt>libwfg</tt> from within <tt>libdrm</tt>.  Each <tt>drm_t</tt> will also need to contain a <tt>pthread_mutex_t</tt> in
+    order to actually preform the underlying locking and unlocking that is requried as part of the mutex.  Since you are preventing or avoiding deadlock, you may not always actaully call the underlying <tt>pthread_mutex_lock()</tt> if
+    it may cause a deadlock.
+</p>
+
+
+
+
+<h2>Test Files</h2>
+<p>
+    We have provided you with five test programs for you:
+    <ul>
+        <li><tt>testwfg</tt>, to test your wait-for graph</li>
+        <li><tt>example-NDC</tt>, an example with NO_DEADLOCK_CHECKING</li>
+        <li><tt>example-DP</tt>, an example with DEADLOCK_PREVENTION</li>
+        <li><tt>example-DA</tt>, an example with DEADLOCK_AVOIDANCE</li>
+        <li><tt>example-DD</tt>, an example with DEADLOCK_DETECTION</li>
+    </ul>
+
+    Feel free to modify or change these examples.  The only files that are picked up by the autograder for this MP are <tt>libwfg.c</tt>, <tt>libwfg.h</tt>, <tt>libdrm.c</tt>, and <tt>libdrm.h</tt>.
+</p>
+
+
+
+<h2>Compile / Run</h2>
+
+<p>To compile, run the following commands from a command prompt on
+a Linux machine:</p>
+
+<blockquote>
+   $ make clean <br />
+   $ make
+</blockquote>
+
+<p>To run the example code:</p>
+<blockquote>
+	$ ./testwfg<br />
+	$ ./example-NDC<br />
+	$ ./example-DP<br />
+	$ ./example-DA<br />
+	$ ./example-DD
+</blockquote>
+
+
+
+</body>
+</html>
